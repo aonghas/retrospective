@@ -7,7 +7,7 @@
         v-if="!loading"
         class="container"
         :user="user"
-        :bills="bills"
+        :boards="boards"
         :error="error"
         @checkIn="checkIn"
         @logout="logout"

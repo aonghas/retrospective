@@ -2,14 +2,14 @@ import firebase from "firebase";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDOpq_68RCo59q80Iq9VQAbxgUXZif9id8",
-  authDomain: "hax-billsplit.firebaseapp.com",
-  databaseURL: "https://hax-billsplit.firebaseio.com",
-  projectId: "hax-billsplit",
-  storageBucket: "hax-billsplit.appspot.com",
-  messagingSenderId: "99214696065",
-  appId: "1:99214696065:web:dbe684dbdb60935220b780",
-  measurementId: "G-4V6MNV83Q9"
+  apiKey: "AIzaSyDgEd3R56j-BOl6dFXu1gjcbqqmVIfRWB4",
+  authDomain: "vue-retrospective.firebaseapp.com",
+  databaseURL: "https://vue-retrospective.firebaseio.com",
+  projectId: "vue-retrospective",
+  storageBucket: "vue-retrospective.appspot.com",
+  messagingSenderId: "737732518114",
+  appId: "1:737732518114:web:2eb9f2c9e7c295033e7ebb",
+  measurementId: "G-X90BBJ44KC"
 };
 // Initialize Firebase
 const firebaseApp = firebase.initializeApp(firebaseConfig);

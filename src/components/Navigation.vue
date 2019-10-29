@@ -1,14 +1,12 @@
 <template>
   <div>
     <v-toolbar color="cyan">
-      <v-toolbar-title>
-        <router-link to="/" class="toolbar-title">Retroo</router-link>
-      </v-toolbar-title>
+      <v-toolbar-title>Retroo</v-toolbar-title>
 
       <div class="flex-grow-1"></div>
 
       <v-toolbar-items>
-        <v-btn text to="/bills" v-if="user">Boards</v-btn>
+        <v-btn text to="/boards" v-if="user">Boards</v-btn>
         <v-btn text to="/login" v-if="!user">Login</v-btn>
         <v-btn text @click="$emit('logout')" v-if="user">Logout</v-btn>
         <!-- <v-btn text to="/register" v-if="!user">register</v-btn> -->

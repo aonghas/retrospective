@@ -146,7 +146,7 @@ import Firebase from "firebase";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import Participants from "@/views/Participants";
 export default {
-  name: "Bill",
+  name: "Board",
   data() {
     return {
       activeItem: null,

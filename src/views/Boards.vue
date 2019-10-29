@@ -2,7 +2,7 @@
   <div class="container mt-4">
     <div class="row justify-content-center mb-3">
       <div class="col-12 col-md-9 col-lg-7">
-        <router-link class="btn btn-outline-primary mr-2" to="/bills/new" v-if="user">Add bill</router-link>
+        <router-link class="btn btn-outline-primary mr-2" to="/boards/new" v-if="user">New board</router-link>
         <button
           class="btn btn-outline-secondary float-right"
           v-text="editText"
@@ -11,7 +11,7 @@
       </div>
     </div>
     <div class="row justify-content-center">
-      <h1 class="ol-12 col-md-9 col-lg-7 font-weight-light">Your bills</h1>
+      <h1 class="ol-12 col-md-9 col-lg-7 font-weight-light">Your boards</h1>
 
       <div class="col-12 col-md-9 col-lg-7">
         <div class="card">
@@ -45,7 +45,7 @@
 <script>
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 export default {
-  name: "bills",
+  name: "Boards",
   data() {
     return {
       editMode: false,
@@ -64,7 +64,7 @@ export default {
     }
   },
   methods: {},
-  props: ["user", "bills"],
+  props: ["user", "boards"],
   components: {
     FontAwesomeIcon
   }
