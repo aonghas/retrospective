@@ -1,55 +1,46 @@
 <template>
-  <div class="container mt-4">
-    <div class="row justify-content-center mb-3">
-      <div class="col-12 col-md-9 col-lg-7">
-        <router-link class="btn btn-outline-primary mr-2" to="/boards/new" v-if="user">New board</router-link>
-        <button
-          class="btn btn-outline-secondary float-right"
-          v-text="editText"
-          @click="editMode = !editMode"
-        ></button>
-      </div>
-    </div>
-    <div class="row justify-content-center">
-      <h1 class="ol-12 col-md-9 col-lg-7 font-weight-light">Your boards</h1>
+  <v-container>
+    <v-row>
+      <v-col>
+        <h1 class="ol-12 col-md-9 col-lg-7 font-weight-light">Your boards</h1>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col v-if="!boards.length">You have no boards.</v-col>
+      <v-col v-for="item in boards" :key="item.id">
+        <v-card width="250" height="180" outlined>
+          <v-list-item three-line>
+            <v-list-item-content>
+              <div class="overline mb-2">{{item.created.seconds | humanizeDate }}</div>
+              <v-list-item-title class="headline mb-1">{{item.name}}</v-list-item-title>
+              <v-list-item-subtitle>{{item.items}}</v-list-item-subtitle>
+            </v-list-item-content>
+          </v-list-item>
 
-      <div class="col-12 col-md-9 col-lg-7">
-        <div class="card">
-          <div class="list-group list-group-flush">
-            <router-link
-              tag="button"
-              class="list-group-item list-group-item-action"
-              v-for="item in bills"
-              :key="item.id"
-              title="View bill"
-              :to="'/bills/' + item.aliasID"
-            >
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                title="Delete Bill"
-                @click.prevent="$emit('deleteBill', item.id)"
-              >
-                <font-awesome-icon icon="trash"></font-awesome-icon>
-              </button>
-              <span class="ml-2">{{item.name}}</span>
-              <div class="float-right text-muted">{{item.items | totalPrice | currency }}</div>
-            </router-link>
-            <div class="list-group-item d-flex" v-if="!bills.length">You have no bills to split.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+          <v-card-actions>
+            <v-btn color="primary" :to="'/boards/' + item.aliasID" text>View board</v-btn>
+            <v-btn color="error" text>Delete</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import moment from "moment";
+
+import Firebase from "firebase";
+import db from "../db.js";
+
 export default {
   name: "Boards",
   data() {
     return {
       editMode: false,
-      meetingName: null
+      meetingName: null,
+      boards: []
     };
   },
   computed: {
@@ -61,10 +52,28 @@ export default {
     totalPrice(value) {
       const reducer = (accum, current) => parseFloat(current.price) + accum;
       return value.reduce(reducer, 0);
+    },
+    humanizeDate(date) {
+      return moment(date * 1000).fromNow();
     }
   },
+  mounted() {
+    db.collection("boards").onSnapshot(snapshot => {
+      const snapData = [];
+      snapshot.forEach(doc => {
+        snapData.push({
+          id: doc.id,
+          aliasID: doc.data().aliasID,
+          name: doc.data().name,
+          created: doc.data().createdAt,
+          items: doc.data().items
+        });
+      });
+      this.boards = snapData;
+    });
+  },
   methods: {},
-  props: ["user", "boards"],
+  props: ["user"],
   components: {
     FontAwesomeIcon
   }

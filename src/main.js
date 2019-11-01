@@ -30,10 +30,6 @@ library.add(
 
 Vue.config.productionTip = false;
 
-// Vue.filter("currency", value => {
-//   return "$" + parseFloat(value).toFixed(2);
-// });
-
 Vue.use(Vue2Filters);
 
 Vue.mixin({

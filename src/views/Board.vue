@@ -1,143 +1,18 @@
 <template>
-  <div>
-    <div class="mt-4">
-      <div class="row justify-content-center">
-        <div class="col">
-          <div class="row justify-content-center">
-            <div class="col-12 col-md-8 text-center" v-if="!found">
-              <div class="alert alert-warning" role="alert">
-                <h4 class="alert-heading">Uh oh...!</h4>
-                <p class="mb-0">
-                  We can't find the bill
-                  <strong>{{this.aliasID}}</strong>.
-                </p>
-              </div>
-              <router-link class="btn btn-outline-primary" to="/home">Take me back</router-link>
-            </div>
-            <!-- End of not found section -->
-
-            <div class="col-12 col-md-10">
-              <div v-if="found">
-                <div class="card bg-light">
-                  <div class="card-body">
-                    <h1 class="font-weight-light mb-3">
-                      {{currentBill.name}}
-                      <span
-                        class="badge badge-info float-right"
-                        @click="share"
-                      >{{ aliasID }}</span>
-                    </h1>
-                    <div class="row">
-                      <div class="col-12 col-md-4 mb-3 d-none d-md-block">
-                        <div class="card">
-                          <div class="card-body">
-                            <Participants
-                              :currentBill="currentBill"
-                              :showBar="showParticipants"
-                              @dismiss="showParticipants = false"
-                            ></Participants>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-12 col-md-8">
-                        <button
-                          class="btn btn-sm btn-outline-primary float-right d-md-none mb-2"
-                          @click="showParticipants = true"
-                        >Participants</button>
-
-                        <h4 class="mt-0 mb-0">Add item</h4>
-                        <form class="formgroup mt-2" v-on:submit.prevent="handleAdd">
-                          <div class="input-group input-group">
-                            <input
-                              type="text"
-                              class="form-control"
-                              name="itemName"
-                              placeholder="Item"
-                              aria-describedby="buttonAdd"
-                              v-model="item.name"
-                              required
-                              ref="itemName"
-                              style="width: 50%"
-                            />
-                            <input
-                              type="number"
-                              step="0.01"
-                              class="form-control"
-                              name="itemPrice"
-                              placeholder="Price"
-                              aria-describedby="buttonAdd"
-                              v-model="item.price"
-                              required
-                              ref="itemPrice"
-                            />
-                            <div class="input-group-append">
-                              <button type="submit" class="btn btn-info" id="buttonAdd">+</button>
-                            </div>
-                          </div>
-                        </form>
-                        <div class="row mt-3">
-                          <h4 class="col mb-0">
-                            Bill items
-                            <small>
-                              <span
-                                class="badge badge-info align-text-top"
-                              >{{currentBill.items.length}}</span>
-                            </small>
-                          </h4>
-                          <div class="col text-right bottom-align-text">
-                            Total:
-                            <strong>{{totalPrice | currency('£')}}</strong>
-                          </div>
-                        </div>
-
-                        <p
-                          v-if="!currentBill.items.length"
-                          class="text-muted mt-2 mb-0"
-                        >Nothing to show yet</p>
-
-                        <div class="list-group mt-2" v-if="currentBill.items.length">
-                          <a
-                            href="#"
-                            class="list-group-item list-group-item-action"
-                            v-for="item in currentBill.items.slice().reverse()"
-                            v-bind:key="item.id"
-                            v-bind:class="{'active' : item.id === activeItem}"
-                            @click.prevent="activeItem = item.id"
-                          >
-                            {{item.name}}
-                            <span class="float-right">{{item.price | currency('£') }}</span>
-                          </a>
-                        </div>
-                        <div class="form-check my-2 mr-sm-2">
-                          <input
-                            v-model="currentBill.serviceCharge"
-                            class="form-check-input"
-                            type="checkbox"
-                            id="serviceCharge"
-                            @change="update"
-                          />
-                          <label
-                            class="form-check-label"
-                            for="serviceCharge"
-                          >Add 12.5% service charge to bill</label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <v-container>
+    <v-row v-if="!found">
+      <v-col class="text-center">
+        <div class="alert alert-warning" role="alert">
+          <h4 class="headline">Uh oh...!</h4>
+          <p class="mb-0">
+            We can't find the board
+            <strong>{{this.aliasID}}</strong>.
+          </p>
         </div>
-      </div>
-    </div>
-    <!-- TO-DO sidebar -->
-    <!-- <Participants
-      :currentBill="currentBill"
-      :showBar="showParticipants"
-      @dismiss="showParticipants = false"
-    ></Participants>-->
-  </div>
+        <v-btn depressed color="yellow lighten-4" class="mt-3" to="/home">Take me back</v-btn>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 <script>
 import db from "../db.js";
@@ -167,7 +42,7 @@ export default {
       }
     };
   },
-  props: ["user", "bills"],
+  props: ["user", "boards"],
   components: {
     FontAwesomeIcon,
     Participants
@@ -180,15 +55,7 @@ export default {
       .catch(err => {});
     this.aliasID = this.$route.params.aliasID.toUpperCase();
   },
-  computed: {
-    totalPrice() {
-      const reducer = (accum, current) => parseFloat(current.price) + accum;
-      return (
-        this.currentBill.items.reduce(reducer, 0) *
-        (this.currentBill.serviceCharge ? 1.125 : 1)
-      );
-    }
-  },
+  computed: {},
   methods: {
     share() {
       if (navigator.share) {
@@ -204,8 +71,8 @@ export default {
         console.log(window.location.href);
       }
     },
-    createNewBill() {
-      db.collection("bills")
+    createNewBoard() {
+      db.collection("boards")
         .add({
           aliasID: this.aliasID,
           createdAt: Firebase.firestore.FieldValue.serverTimestamp(),
@@ -221,7 +88,7 @@ export default {
     update(e) {
       console.log("this bill", this.currentBill);
       if (this.currentBill.id) {
-        db.collection("bills")
+        db.collection("boards")
           .doc(this.currentBill.id)
           .update({
             name: this.currentBill.name,
@@ -229,7 +96,7 @@ export default {
             serviceCharge: this.currentBill.serviceCharge
           });
       } else if (this.currentBill.name) {
-        this.createNewBill();
+        this.createNewBoard();
       }
     },
     handleAdd() {
@@ -251,7 +118,7 @@ export default {
       this.$emit("input", this.$el.innerText);
     },
     updateView() {
-      const found = this.bills.find(el => {
+      const found = this.boards.find(el => {
         return el.aliasID == this.$route.params.aliasID;
       });
 
