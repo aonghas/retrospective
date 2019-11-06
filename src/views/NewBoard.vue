@@ -1,29 +1,30 @@
 <template>
-  <div class="container mt-4">
-    <div class="row justify-content-center">
-      <div class="col">
-        <div class="row justify-content-center">
-          <div class="col-12 col-md-9 col-lg-7">
-            <h1 class="font-weight-light mb-3">New board</h1>
-            <form v-on:submit.prevent="createNewBoard">
-              <h5 class="font-weight-light">Give your board a name</h5>
+  <v-container>
+    <v-row>
+      <v-col>
+        <h1 class="font-weight-light">New board</h1>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-form v-on:submit.prevent="createNewBoard" ref="form">
+          <h5 class="font-weight-light">Give your board a name</h5>
 
-              <div class="input-group mb-3">
-                <input
-                  class="form-control"
-                  placeholder="eg. Superheroes Sprint 3 Retro"
-                  v-model="name"
-                  required
-                />
-              </div>
-
-              <button type="submit" class="btn btn-primary float-right mt-2">Next</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+          <v-text-field
+            v-model="name"
+            color="cyan"
+            class="alias-input"
+            placeholder="eg. Team A Sprint 1.5"
+            required
+            :rules="nameRules"
+            :append-outer-icon="'mdi-arrow-right-bold-circle'"
+            @click:append-outer="createNewBoard"
+            outlined
+          ></v-text-field>
+        </v-form>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 <script>
 import db from "../db.js";
@@ -34,10 +35,17 @@ export default {
   name: "NewBoard",
   data() {
     return {
+      valid: true,
+      nameRules: [v => !!v || "Name is required"],
       participant: {
         name: "",
         id: null
       },
+      columns: [
+        { heading: "Went Well", cards: [], id: this.generateID(6) },
+        { heading: "Not So Well", cards: [], id: this.generateID(6) },
+        { heading: "Actions", cards: [], id: this.generateID(6) }
+      ],
       participants: [],
       id: null,
       aliasID:
@@ -63,19 +71,23 @@ export default {
       this.participant.id = this.generateID(6);
     },
     createNewBoard() {
-      db.collection("boards")
-        .add({
-          aliasID: this.aliasID,
-          createdAt: Firebase.firestore.FieldValue.serverTimestamp(),
-          name: this.name,
-          items: this.items
-        })
-        .then(doc => {
-          console.log("created new", doc.id);
-          this.$router
-            .push({ name: "board", params: { aliasID: this.aliasID } })
-            .catch(err => {});
-        });
+      if (this.$refs.form.validate()) {
+        db.collection("boards")
+          .doc(this.aliasID)
+          .set({
+            createdAt: Firebase.firestore.FieldValue.serverTimestamp(),
+            name: this.name,
+            columns: this.columns,
+            active: true,
+            deactivatedDate: null
+          })
+          .then(doc => {
+            console.log("created new", doc);
+            this.$router
+              .push({ name: "board", params: { id: this.aliasID } })
+              .catch(err => {});
+          });
+      }
     },
     highlightContent(e) {
       console.log(e);
