@@ -22,7 +22,10 @@
         <v-col v-for="(column, index) in board.columns" :key="column.id">
           <h2 class="mb-2">
             {{column.heading}}
-            <v-chip :input-value="'true'" outlined>{{columnCards(column.id).length}}</v-chip>
+            <v-chip
+              :input-value="'true'"
+              outlined
+            >{{cards[column.id] && cards[column.id].length || 0}}</v-chip>
           </h2>
           <form v-on:submit.prevent="add(index, column.id)">
             <v-text-field
@@ -35,20 +38,25 @@
               outlined
             ></v-text-field>
           </form>
-          <draggable v-model="cards">
-            <v-card class="mb-2" v-for="(card, ind) in columnCards(column.id)" :key="ind">
-              <v-card-text>{{card.rankIndex}} {{ind}} {{card.comment}}</v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-chip class="ma-2" color="green" text-color="white">
-                  <v-avatar left class="green darken-4">{{card.upvote}}</v-avatar>
-                  <v-icon>mdi-thumb-up</v-icon>
-                </v-chip>
-                <v-btn @click="deleteCard(card.id)" icon>
-                  <v-icon color="red lighten-3">mdi-delete</v-icon>
-                </v-btn>
-              </v-card-actions>
-            </v-card>
+          <draggable v-model="cards[column.id]" group="cards" :animation="150">
+            <transition-group>
+              <v-card class="mb-2" v-for="(card, ind) in cards[column.id]" :key="card.id">
+                <v-card-text>
+                  <strong>{{card.rankIndex}}</strong>
+                  {{card.comment}}
+                </v-card-text>
+                <v-card-actions>
+                  <v-spacer></v-spacer>
+                  <!-- <v-chip class="ma-2" color="green" text-color="white">
+                    <v-avatar left class="green darken-4">{{card.upvote}}</v-avatar>
+                    <v-icon>mdi-thumb-up</v-icon>
+                  </v-chip>-->
+                  <v-btn @click="deleteCard(card.id)" icon>
+                    <v-icon color="red lighten-3">mdi-delete</v-icon>
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </transition-group>
           </draggable>
         </v-col>
       </v-row>
@@ -67,7 +75,7 @@ export default {
       rankIndex: 0,
       cardInput: {},
       id: null,
-      cards: [],
+      cards: {},
       board: {
         columns: [],
         id: null,
@@ -90,11 +98,6 @@ export default {
   },
   computed: {},
   methods: {
-    columnCards(id) {
-      return this.cards.filter(card => {
-        return card.columnID == id;
-      });
-    },
     deleteCard(id) {
       db.collection("boards")
         .doc(this.id)
@@ -112,10 +115,8 @@ export default {
           upvote: 0,
           downvote: 0,
           rankIndex:
-            (this.columnCards(columnID).length &&
-              this.columnCards(columnID)
-                .slice(-1)
-                .pop().rankIndex + 100) ||
+            (this.cards[columnID].length &&
+              this.cards[columnID].slice(-1).pop().rankIndex + 100) ||
             100
         });
       this.cardInput[index] = "";
@@ -134,6 +135,9 @@ export default {
     const boardRef = db.collection("boards");
     boardRef.doc(this.id).onSnapshot(doc => {
       this.board = doc.data();
+      this.board.columns.forEach(column => {
+        this.$set(this.cards, column.id, []);
+      });
     });
 
     boardRef
@@ -142,22 +146,22 @@ export default {
       .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(change => {
           if (change.type === "added") {
-            this.cards.push(
+            this.cards[change.doc.data().columnID].push(
               Object.assign({}, change.doc.data(), {
                 id: change.doc.id
               })
             );
-            this.rankIndex += 100;
           }
           if (change.type === "modified") {
             console.log("Modified city: ", change.doc.data());
           }
           if (change.type === "removed") {
-            for (var i = 0; i < this.cards.length; i++) {
-              if (this.cards[i].id === change.doc.id) {
-                this.cards.splice(i, 1);
-              }
-            }
+            this.cards[change.doc.data().columnID] = this.cards[
+              change.doc.data().columnID
+            ].filter(card => {
+              return card.id !== change.doc.id;
+            });
+            console.log("removed", change);
           }
         });
         // this.cards = doc.data();
