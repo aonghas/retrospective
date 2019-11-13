@@ -15,13 +15,13 @@
     <div v-if="found">
       <v-row>
         <v-col>
-          <h1 class="font-weight-light">{{board.name}} ({{id}})</h1>
+          <h1 class="font-weight-light">{{board.name}}({{id}})</h1>
         </v-col>
       </v-row>
       <v-row>
-        <v-col v-for="(column, index) in board.columns" :key="column.id">
+        <v-col v-for="(column, index) in board.columns" :key="column.id" :id="column.id">
           <h2 class="mb-2">
-            {{column.heading}}
+            {{column.heading}} ({{column.id}})
             <v-chip
               :input-value="'true'"
               outlined
@@ -38,11 +38,22 @@
               outlined
             ></v-text-field>
           </form>
-          <draggable v-model="cards[column.id]" group="cards" :animation="150">
+          <draggable
+            v-model="cards[column.id]"
+            group="cards"
+            :animation="150"
+            @end="onEnd"
+            ghost-class="ghost"
+          >
             <transition-group>
-              <v-card class="mb-2" v-for="(card, ind) in cards[column.id]" :key="card.id">
+              <v-card
+                class="mb-2"
+                v-for="(card, ind) in sortedCards[column.id]"
+                :key="card.id"
+                :columnID="column.id"
+              >
                 <v-card-text>
-                  <strong>{{card.rankIndex}}</strong>
+                  <strong>{{card.rankIndex}} {{card.id}}</strong>
                   {{card.comment}}
                 </v-card-text>
                 <v-card-actions>
@@ -67,6 +78,7 @@
 import db from "../db.js";
 import Firebase from "firebase";
 import draggable from "vuedraggable";
+import { findIndex, sortBy, mapObject } from "underscore";
 
 export default {
   name: "Board",
@@ -96,8 +108,41 @@ export default {
       .catch(err => {});
     this.id = this.$route.params.id.toUpperCase();
   },
-  computed: {},
+  computed: {
+    sortedCards() {
+      return mapObject(this.cards, (val, key) => {
+        return sortBy(val, "rankIndex");
+      });
+    }
+  },
   methods: {
+    onEnd(evt) {
+      const oldColumnRef = evt.from.parentNode.parentNode.id;
+      const newColumnRef = evt.to.parentNode.parentNode.id;
+      if (oldColumnRef !== newColumnRef || evt.oldIndex !== evt.newIndex) {
+        let newRank;
+        if (evt.newIndex == 0) {
+          newRank = this.cards[newColumnRef][1].rankIndex / 2;
+        } else if (evt.newIndex == this.cards[newColumnRef].length - 1) {
+          newRank = this.cards[newColumnRef][evt.newIndex - 1].rankIndex + 100;
+        } else {
+          newRank =
+            (this.cards[newColumnRef][evt.newIndex - 1].rankIndex +
+              this.cards[newColumnRef][evt.newIndex + 1].rankIndex) /
+            2;
+        }
+        this.$set(this.cards[newColumnRef][evt.newIndex], "rankIndex", newRank);
+
+        db.collection("boards")
+          .doc(this.id)
+          .collection("cards")
+          .doc(this.cards[newColumnRef][evt.newIndex].id)
+          .update({
+            columnID: newColumnRef,
+            rankIndex: newRank
+          });
+      }
+    },
     deleteCard(id) {
       db.collection("boards")
         .doc(this.id)
@@ -153,7 +198,17 @@ export default {
             );
           }
           if (change.type === "modified") {
-            console.log("Modified city: ", change.doc.data());
+            this.$set(
+              this.cards[change.doc.data().columnID],
+              findIndex(this.cards[change.doc.data().columnID], {
+                id: change.doc.id
+              }),
+              Object.assign({}, change.doc.data(), {
+                id: change.doc.id
+              })
+            );
+
+            // console.log("modified", change);
           }
           if (change.type === "removed") {
             this.cards[change.doc.data().columnID] = this.cards[
@@ -161,7 +216,7 @@ export default {
             ].filter(card => {
               return card.id !== change.doc.id;
             });
-            console.log("removed", change);
+            // console.log("removed", change);
           }
         });
         // this.cards = doc.data();

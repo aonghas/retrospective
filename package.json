@@ -16,6 +16,7 @@
     "core-js": "^2.6.5",
     "firebase": "^6.6.2",
     "jquery": "^3.4.1",
+    "underscore": "^1.9.1",
     "vue": "^2.6.10",
     "vue-router": "^3.0.3",
     "vue2-filters": "^0.7.2",
