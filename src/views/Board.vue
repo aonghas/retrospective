@@ -15,54 +15,49 @@
     <div v-if="found">
       <v-row>
         <v-col>
-          <h1 class="font-weight-light">{{board.name}}({{id}})</h1>
+          <h1 class="font-weight-light">{{board.name}} ({{id}})</h1>
         </v-col>
       </v-row>
       <v-row>
-        <v-col v-for="(column, index) in board.columns" :key="column.id" :id="column.id">
+        <v-col v-for="(column, colIndex) in board.columns" :key="column.id" :id="column.id">
           <h2 class="mb-2">
             {{column.heading}} ({{column.id}})
-            <v-chip
-              :input-value="'true'"
-              outlined
-            >{{cards[column.id] && cards[column.id].length || 0}}</v-chip>
+            <v-chip :input-value="'true'" outlined>{{column.cards.length}}</v-chip>
           </h2>
-          <form v-on:submit.prevent="add(index, column.id)">
+          <form v-on:submit.prevent="add(colIndex, column.id)">
             <v-text-field
-              v-model="cardInput[index]"
+              v-model="cardInput[colIndex]"
               label="Add new item"
               color="cyan"
               minlength="1"
+              required
               :append-icon="'mdi-plus-circle'"
-              @click:append="add(index, column.id)"
+              @click:append="add(colIndex, column.id)"
               outlined
             ></v-text-field>
           </form>
           <draggable
-            v-model="cards[column.id]"
+            v-model="column.cards"
             group="cards"
             :animation="150"
             @end="onEnd"
             ghost-class="ghost"
           >
-            <transition-group>
+            <transition-group appear name="slide-fade" mode="out-in">
               <v-card
-                class="mb-2"
-                v-for="(card, ind) in sortedCards[column.id]"
+                class="mb-2 card"
+                v-for="(card, cardIndex) in column.cards"
                 :key="card.id"
                 :columnID="column.id"
               >
-                <v-card-text>
-                  <strong>{{card.rankIndex}} {{card.id}}</strong>
-                  {{card.comment}}
-                </v-card-text>
+                <v-card-text>{{card.comment}}</v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <!-- <v-chip class="ma-2" color="green" text-color="white">
                     <v-avatar left class="green darken-4">{{card.upvote}}</v-avatar>
                     <v-icon>mdi-thumb-up</v-icon>
                   </v-chip>-->
-                  <v-btn @click="deleteCard(card.id)" icon>
+                  <v-btn @click="deleteCard(colIndex, cardIndex)" icon>
                     <v-icon color="red lighten-3">mdi-delete</v-icon>
                   </v-btn>
                 </v-card-actions>
@@ -84,7 +79,6 @@ export default {
   name: "Board",
   data() {
     return {
-      rankIndex: 0,
       cardInput: {},
       id: null,
       cards: {},
@@ -108,63 +102,34 @@ export default {
       .catch(err => {});
     this.id = this.$route.params.id.toUpperCase();
   },
-  computed: {
-    sortedCards() {
-      return mapObject(this.cards, (val, key) => {
-        return sortBy(val, "rankIndex");
-      });
-    }
-  },
+  computed: {},
   methods: {
     onEnd(evt) {
-      const oldColumnRef = evt.from.parentNode.parentNode.id;
-      const newColumnRef = evt.to.parentNode.parentNode.id;
-      if (oldColumnRef !== newColumnRef || evt.oldIndex !== evt.newIndex) {
-        let newRank;
-        if (evt.newIndex == 0) {
-          newRank = this.cards[newColumnRef][1].rankIndex / 2;
-        } else if (evt.newIndex == this.cards[newColumnRef].length - 1) {
-          newRank = this.cards[newColumnRef][evt.newIndex - 1].rankIndex + 100;
-        } else {
-          newRank =
-            (this.cards[newColumnRef][evt.newIndex - 1].rankIndex +
-              this.cards[newColumnRef][evt.newIndex + 1].rankIndex) /
-            2;
-        }
-        this.$set(this.cards[newColumnRef][evt.newIndex], "rankIndex", newRank);
-
-        db.collection("boards")
-          .doc(this.id)
-          .collection("cards")
-          .doc(this.cards[newColumnRef][evt.newIndex].id)
-          .update({
-            columnID: newColumnRef,
-            rankIndex: newRank
-          });
-      }
+      this.updateDB();
     },
-    deleteCard(id) {
+    deleteCard(colIndex, cardIndex) {
+      this.board.columns[colIndex].cards.splice(cardIndex, 1);
+      this.updateDB();
+    },
+    updateDB() {
       db.collection("boards")
         .doc(this.id)
-        .collection("cards")
-        .doc(id)
-        .delete();
+        .update({
+          columns: this.board.columns
+        });
     },
-    add(index, columnID) {
-      db.collection("boards")
-        .doc(this.id)
-        .collection("cards")
-        .add({
-          columnID: columnID,
-          comment: this.cardInput[index],
+    add(colIndex) {
+      if (this.cardInput[colIndex].length) {
+        this.board.columns[colIndex].cards.push({
+          comment: this.cardInput[colIndex],
           upvote: 0,
           downvote: 0,
-          rankIndex:
-            (this.cards[columnID].length &&
-              this.cards[columnID].slice(-1).pop().rankIndex + 100) ||
-            100
+          id: this.generateID(6)
         });
-      this.cardInput[index] = "";
+
+        this.updateDB();
+      }
+      this.cardInput[colIndex] = "";
     }
   },
   watch: {
@@ -180,9 +145,9 @@ export default {
     const boardRef = db.collection("boards");
     boardRef.doc(this.id).onSnapshot(doc => {
       this.board = doc.data();
-      this.board.columns.forEach(column => {
-        this.$set(this.cards, column.id, []);
-      });
+      // this.board.columns.forEach(column => {
+      //   this.$set(this.cards, column.id, []);
+      // });
     });
 
     boardRef
@@ -190,37 +155,65 @@ export default {
       .collection("cards")
       .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(change => {
-          if (change.type === "added") {
-            this.cards[change.doc.data().columnID].push(
-              Object.assign({}, change.doc.data(), {
-                id: change.doc.id
-              })
-            );
-          }
-          if (change.type === "modified") {
-            this.$set(
-              this.cards[change.doc.data().columnID],
-              findIndex(this.cards[change.doc.data().columnID], {
-                id: change.doc.id
-              }),
-              Object.assign({}, change.doc.data(), {
-                id: change.doc.id
-              })
-            );
+          this.board = change.doc.data();
+          // if (change.type === "added") {
+          //   this.board = change.doc.data()
+          // }
+          // if (change.type === "modified") {
+          //   this.$set(
+          //     this.cards[change.doc.data().columnID],
+          //     findIndex(this.cards[change.doc.data().columnID], {
+          //       id: change.doc.id
+          //     }),
+          //     Object.assign({}, change.doc.data(), {
+          //       id: change.doc.id
+          //     })
+          //   );
 
-            // console.log("modified", change);
-          }
-          if (change.type === "removed") {
-            this.cards[change.doc.data().columnID] = this.cards[
-              change.doc.data().columnID
-            ].filter(card => {
-              return card.id !== change.doc.id;
-            });
-            // console.log("removed", change);
-          }
+          //   // console.log("modified", change);
+          // }
+          // if (change.type === "removed") {
+          //   this.cards[change.doc.data().columnID] = this.cards[
+          //     change.doc.data().columnID
+          //   ].filter(card => {
+          //     return card.id !== change.doc.id;
+          //   });
+          //   // console.log("removed", change);
+          // }
         });
         // this.cards = doc.data();
       });
   }
 };
 </script>
+
+<style scoped>
+.slide-fade-enter-active {
+  transition: all 0.3s ease !important;
+}
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1) !important;
+}
+.slide-fade-enter
+/* .slide-fade-leave-active below version 2.1.8 */ {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+.slide-fade-leave-to {
+  background: red;
+  transform: translateX(20px);
+  opacity: 0;
+}
+.card {
+  position: relative;
+  top: 0;
+  left: 0;
+  transition: top 0.2s ease, left 0.25s ease;
+  cursor: move;
+}
+
+.card:hover {
+  top: -2px;
+  left: -1px;
+}
+</style>
